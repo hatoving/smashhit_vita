@@ -6,14 +6,14 @@ endif ()
 
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE PATH "Toolchain file")
 
-project(so_loader C CXX)
+project(SmashHit C CXX)
 
 include("${VITASDK}/share/vita.cmake" REQUIRED)
 
 # Vita application configuration
-set(VITA_APP_NAME "so-loader")
-set(VITA_TITLEID "SOLOADER0")
-set(VITA_VPKNAME "so_loader")
+set(VITA_APP_NAME "Smash Hit")
+set(VITA_TITLEID "SMASH1HIT")
+set(VITA_VPKNAME "SmashHit")
 set(VITA_VERSION "01.00")
 set(VITA_MKSFOEX_FLAGS "-d ATTRIBUTE2=12")
 
@@ -22,8 +22,8 @@ set(PSVITAIP "192.168.0.198" CACHE STRING "PSVita IP (for FTP access)")
 set(PARSECOREPATH "$ENV{PARSECOREPATH}" CACHE STRING "vita-parse-core main.py")
 
 # Game-specific definitions
-set(DATA_PATH "ux0:data/gamename/" CACHE STRING "Path to data (with trailing /)")
-set(SO_PATH "${DATA_PATH}main.so" CACHE STRING "Path to .so")
+set(DATA_PATH "ux0:data/smash_hit/" CACHE STRING "Path to data (with trailing /)")
+set(SO_PATH "${DATA_PATH}libsmashhit.so" CACHE STRING "Path to .so")
 add_definitions(-DDATA_PATH="${DATA_PATH}" -DSO_PATH="${SO_PATH}")
 
 option(USE_SCELIBC_IO "Use SceLibcBridge for IO and some other std functions" ON)
@@ -79,19 +79,32 @@ add_executable(${CMAKE_PROJECT_NAME}
                source/reimpl/pthr.c
                source/reimpl/sys.c
                source/reimpl/time64.c
-               source/reimpl/asset_manager.cpp
                source/utils/dialog.c
                source/utils/glutil.c
                source/utils/init.c
                source/utils/logger.c
                source/utils/settings.c
                source/utils/utils.c
+               lib/falso_jni/ConvertUTF.c
                lib/falso_jni/FalsoJNI.c
                lib/falso_jni/FalsoJNI_ImplBridge.c
                lib/falso_jni/FalsoJNI_Logger.c
                lib/sha1/sha1.c
                lib/fios/fios.c
-               lib/so_util/so_util.c)
+               lib/so_util/so_util.c
+               lib/falso_ndk/polling/pseudo_eventfd.cpp
+               lib/falso_ndk/polling/pseudo_pipe.cpp
+               lib/falso_ndk/ALooper.cpp
+               lib/falso_ndk/AAssetManager.cpp
+               lib/falso_ndk/PseudoEpoll.cpp
+               lib/falso_ndk/AFakeNative_Utils.cpp
+               lib/falso_ndk/ANativeWindow.cpp
+               lib/falso_ndk/ASensor.cpp
+               lib/falso_ndk/AConfiguration.cpp
+               lib/falso_ndk/AInput.cpp
+               lib/falso_ndk/utils/controls.cpp
+               lib/falso_ndk/utils/sensors.cpp
+               lib/falso_ndk/ANativeActivity.cpp)
 
 add_subdirectory(lib/libc_bridge)
 add_dependencies(${CMAKE_PROJECT_NAME} SceLibcBridge)
@@ -107,6 +120,14 @@ target_include_directories(${CMAKE_PROJECT_NAME}
 target_link_libraries(${CMAKE_PROJECT_NAME}
                       -Wl,--whole-archive pthread -Wl,--no-whole-archive
                       stdc++
+                      OpenSLES
+					            openal
+                      sndfile
+                      vorbisfile
+                      vorbis
+                      ogg
+                      vorbisenc
+                      FLAC
                       vitaGL
                       vitashark
                       SceShaccCgExt

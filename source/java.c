@@ -1,10 +1,39 @@
 #include <falso_jni/FalsoJNI_Impl.h>
 
+#include <string.h>
+#include <stdio.h>
+
 /*
  * JNI Methods
 */
 
-NameToMethodID nameToMethodId[] = {};
+jstring command(int id, va_list args) {
+	// get args from va-list arg
+	char *arg = va_arg(args, char *);
+	
+	char* key = strtok(arg, " ");
+	char* value = strtok(NULL, " ");
+
+	if (strstr(key, "storegetstatus")) {
+		return (jstring)"2";
+	} else if (strstr(key, "storeisrestored")) {
+		return (jstring)"true";
+	} else if (strstr(key, "storegetprice")) {
+		return (jstring)"";
+	} else if (strstr(key, "issignedin")) {
+		return (jstring)"false";
+	} else if (strstr(key, "storeenabled")) {
+		return (jstring)"true";
+	} else {
+		printf("JNI: Method Call: command ~ (%s, %s)\n", key, value);
+	}
+
+	return (jstring)"";
+}
+
+NameToMethodID nameToMethodId[] = {
+	{10, "command", METHOD_TYPE_OBJECT},
+};
 
 MethodsBoolean methodsBoolean[] = {};
 MethodsByte methodsByte[] = {};
@@ -13,7 +42,9 @@ MethodsDouble methodsDouble[] = {};
 MethodsFloat methodsFloat[] = {};
 MethodsInt methodsInt[] = {};
 MethodsLong methodsLong[] = {};
-MethodsObject methodsObject[] = {};
+MethodsObject methodsObject[] = {
+	{ 10, command },
+};
 MethodsShort methodsShort[] = {};
 MethodsVoid methodsVoid[] = {};
 

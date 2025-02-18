@@ -32,6 +32,15 @@ typedef enum SceFiosThreadType {
     SCE_FIOS_THREAD_TYPES = 3
 } SceFiosThreadType;
 
+typedef struct SceFiosPsarcDearchiverContext
+{
+	size_t size;
+	size_t  workBufferSize;
+	void *pWorkBuffer;
+	intptr_t flags;
+	intptr_t reserved[3];
+} SceFiosPsarcDearchiverContext;
+
 typedef struct SceFiosRamCacheContext {
     size_t sizeOfContext;
     size_t workBufferSize;

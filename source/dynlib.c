@@ -27,6 +27,8 @@
 #include <locale.h>
 #include <poll.h>
 
+#include <SLES/OpenSLES.h>
+
 #include <sys/stat.h>
 #include <sys/unistd.h>
 #include <sys/socket.h>
@@ -38,6 +40,8 @@
 #include "utils/glutil.h"
 #include "utils/utils.h"
 #include "utils/logger.h"
+
+#include <pthread.h>
 
 #ifdef USE_SCELIBC_IO
 #include <libc_bridge/libc_bridge.h>
@@ -51,7 +55,14 @@
 #include "reimpl/sys.h"
 #include "reimpl/egl.h"
 #include "reimpl/time64.h"
-#include "reimpl/asset_manager.h"
+
+#include "falso_ndk/AAssetManager.h"
+#include "falso_ndk/AInput.h"
+#include "falso_ndk/ANativeWindow.h"
+#include "falso_ndk/ALooper.h"
+#include "falso_ndk/AConfiguration.h"
+#include "falso_ndk/PseudoEpoll.h"
+#include "falso_ndk/polling/pseudo_pipe.h"
 
 const unsigned int __page_size = PAGE_SIZE;
 
@@ -132,8 +143,80 @@ void *dlsym_soloader(void * handle, const char * symbol) {
     return NULL;
 }
 
+int AAsset_getLength() {
+	l_error("unimpl: AAsset_getLength");
+	return 0;
+}
+
+int AAssetDir_close() {
+	l_error("unimpl: AAssetDir_close");
+	return 0;
+}
+
+int AAsset_getRemainingLength() {
+	l_error("unimpl: AAsset_getRemainingLength");
+	return 0;
+}
+
+int AAssetManager_openDir() {
+	l_error("unimpl: AAssetManager_openDir");
+	return 0;
+}
+
+void retnull() {
+    return NULL;
+}
+
+
+/*char filename_glob[512];
+FILE* AAssetManager_open_soloader(void *mgr, const char *fname, int mode) {
+	char full_fname[512];
+	sprintf(full_fname, "ux0:data/smash_hit/assets/%s", fname);
+    strcpy(filename_glob, full_fname);
+
+    FILE* ret = fopen(filename_glob, "r");
+    l_info("[AAssetManager] AAssetManager_open(%p, %s, %i): %p", mgr, filename_glob, mode, ret);
+	return ret;
+}
+
+int AAsset_openFileDescriptor_soloader(FILE* f, off_t *start, off_t *len) {
+    *start = 0;
+    fseek(f, 0, SEEK_END);
+    *len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    int ret = open(filename_glob, O_RDONLY);
+    l_info("[AAssetManager] AAsset_openFileDescriptor(%p, %p, %p): %i", f, *start, *len, ret);
+	return ret;
+}
+
+FILE *fdopen_soloader(int fd, const char *mode) {
+    FILE* ret = fopen(filename_glob, mode);
+    l_info("[AAssetManager] fdopen(%i, %s, %s): %p", fd - 1, filename_glob, mode, ret);
+	return ret;
+}
+
+int AAsset_close_soloader(FILE *f) {
+    int ret = fclose(f);
+    l_info("[AAssetManager] AAsset_close(%p): %i", f, ret);
+	return ret;
+} */
+
 so_default_dynlib default_dynlib[] = {
-        // Common C/C++ internals
+        
+        // OpenSLES
+        { "slCreateEngine", (uintptr_t)&ret1 },
+        { "SL_IID_ENGINE", (uintptr_t)&ret0 },
+        { "SL_IID_PLAY", (uintptr_t)&ret0 },
+        { "SL_IID_BUFFERQUEUE", (uintptr_t)&ret0 },
+        { "SL_IID_VOLUME", (uintptr_t)&ret0 },
+        { "SL_IID_SEEK", (uintptr_t)&ret0 },
+        { "SL_IID_PLAYBACKRATE", (uintptr_t)&ret0 },
+    
+    // Common C/C++ internals
+        { "newlocale", (uintptr_t)&newlocale},
+        { "uselocale", (uintptr_t)&uselocale},
+        { "freelocale", (uintptr_t)&freelocale},
         { "_ZNSt8bad_castD1Ev", (uintptr_t)&_ZNSt8bad_castD1Ev },
         { "_ZNSt9exceptionD2Ev", (uintptr_t)&_ZNSt9exceptionD2Ev },
         { "_ZSt17__throw_bad_allocv", (uintptr_t)&_ZSt17__throw_bad_allocv },
@@ -253,7 +336,45 @@ so_default_dynlib default_dynlib[] = {
         { "AAssetManager_fromJava", (uintptr_t)&ret1 },
         { "AAssetManager_open", (uintptr_t)&AAssetManager_open },
         { "AAssetManager_openDir", (uintptr_t)&AAssetManager_openDir },
+        { "AAsset_openFileDescriptor", (uintptr_t)&AAsset_openFileDescriptor },
+        //{ "AAsset_openFileDescriptor", (uintptr_t)&AAssetManager_open },
 
+
+        // AInput
+        { "AInputEvent_getSource", (uintptr_t)&AInputEvent_getSource },
+        { "AInputEvent_getType", (uintptr_t)&AInputEvent_getType },
+        { "AInputQueue_attachLooper", (uintptr_t)&AInputQueue_attachLooper },
+        { "AInputQueue_getEvent", (uintptr_t)&AInputQueue_getEvent },
+        { "AInputQueue_preDispatchEvent", (uintptr_t)&AInputQueue_preDispatchEvent },
+        { "AInputQueue_enqueueEvent", (uintptr_t)&AInputQueue_enqueueEvent },
+        { "AInputQueue_finishEvent", (uintptr_t)&AInputQueue_finishEvent },
+        { "AInputQueue_create", (uintptr_t)&AInputQueue_create },
+        { "AInputQueue_detachLooper", (uintptr_t)&AInputQueue_detachLooper },
+        { "AKeyEvent_getAction", (uintptr_t)&AKeyEvent_getAction },
+        { "AKeyEvent_getKeyCode", (uintptr_t)&AKeyEvent_getKeyCode },
+        { "AMotionEvent_getPointerCount", (uintptr_t)&AMotionEvent_getPointerCount },
+        { "AMotionEvent_getAction", (uintptr_t)&AMotionEvent_getAction },
+        { "AMotionEvent_getPointerId", (uintptr_t)&AMotionEvent_getPointerId },
+        { "AMotionEvent_getX", (uintptr_t)&AMotionEvent_getX },
+        { "AMotionEvent_getY", (uintptr_t)&AMotionEvent_getY },
+
+        // ANativewindow
+        { "ANativeWindow_getWidth", (uintptr_t)&ANativeWindow_getWidth },
+        { "ANativeWindow_getHeight", (uintptr_t)&ANativeWindow_getHeight },
+        { "ANativeWindow_setBuffersGeometry", (uintptr_t)&ANativeWindow_setBuffersGeometry },
+
+        // ALooper
+        { "ALooper_prepare", (uintptr_t)&ALooper_prepare },
+        { "ALooper_addFd", (uintptr_t)&ALooper_addFd },
+        { "ALooper_removeFd", (uintptr_t)&ALooper_removeFd },
+        { "ALooper_pollAll", (uintptr_t)&ALooper_pollAll },
+
+        // AConfiguration
+        { "AConfiguration_new", (uintptr_t)&AConfiguration_new },
+        { "AConfiguration_fromAssetManager", (uintptr_t)&AConfiguration_fromAssetManager },
+        { "AConfiguration_getLanguage", (uintptr_t)&AConfiguration_getLanguage },
+        { "AConfiguration_getCountry", (uintptr_t)&AConfiguration_getCountry },
+        { "AConfiguration_delete", (uintptr_t)&AConfiguration_delete },
 
         // Math
         { "acos", (uintptr_t)&acos },
@@ -442,8 +563,8 @@ so_default_dynlib default_dynlib[] = {
         { "lseek", (uintptr_t)&lseek },
         { "lstat", (uintptr_t)&lstat },
         { "mkdir", (uintptr_t)&mkdir },
-        { "pipe", (uintptr_t)&pipe },
-        { "read", (uintptr_t)&read },
+        { "pipe", (uintptr_t)&pseudo_pipe },
+        { "read", (uintptr_t)&pseudo_read },
         { "realpath", (uintptr_t)&realpath },
         { "remove", (uintptr_t)&remove },
         { "rename", (uintptr_t)&rename },
@@ -451,7 +572,7 @@ so_default_dynlib default_dynlib[] = {
         { "rmdir", (uintptr_t)&rmdir },
         { "truncate", (uintptr_t)&truncate },
         { "unlink", (uintptr_t)&unlink },
-        { "write", (uintptr_t)&write },
+        { "write", (uintptr_t)&pseudo_write },
 
 
         // *printf, *scanf
@@ -498,6 +619,7 @@ so_default_dynlib default_dynlib[] = {
         { "eglQueryString", (uintptr_t)&eglQueryString },
         { "eglQuerySurface", (uintptr_t)&eglQuerySurface },
         { "eglSwapBuffers", (uintptr_t)&eglSwapBuffers },
+        { "eglSwapInterval", (uintptr_t)&eglSwapInterval },
         { "eglTerminate", (uintptr_t)&eglTerminate },
 
 
@@ -539,7 +661,7 @@ so_default_dynlib default_dynlib[] = {
         { "glColor4x", (uintptr_t)&glColor4x },
         { "glColorMask", (uintptr_t)&glColorMask },
         { "glColorPointer", (uintptr_t)&glColorPointer },
-        { "glCompileShader", (uintptr_t)&glCompileShader_soloader },
+        { "glCompileShader", (uintptr_t)&glCompileShader },
         { "glCompressedTexImage2D", (uintptr_t)&glCompressedTexImage2D },
         { "glCompressedTexSubImage2D", (uintptr_t)&ret0 },
         { "glCopyTexImage2D", (uintptr_t)&glCopyTexImage2D },
@@ -698,7 +820,7 @@ so_default_dynlib default_dynlib[] = {
         { "glScalex", (uintptr_t)&glScalex },
         { "glScissor", (uintptr_t)&glScissor },
         { "glShadeModel", (uintptr_t)&glShadeModel },
-        { "glShaderSource", (uintptr_t)&glShaderSource_soloader },
+        { "glShaderSource", (uintptr_t)&glShaderSource },
         { "glStencilFunc", (uintptr_t)&glStencilFunc },
         { "glStencilFuncSeparate", (uintptr_t)&glStencilFuncSeparate },
         { "glStencilMask", (uintptr_t)&glStencilMask },
@@ -796,6 +918,9 @@ so_default_dynlib default_dynlib[] = {
         { "pthread_setschedparam", (uintptr_t) &pthread_setschedparam_soloader },
         { "pthread_setspecific", (uintptr_t)&pthread_setspecific },
         { "pthread_sigmask", (uintptr_t)&ret0 },
+
+        { "__pthread_cleanup_push", (uintptr_t)&retnull },
+        { "__pthread_cleanup_pop", (uintptr_t)&retnull },
 
         { "sem_destroy", (uintptr_t) &sem_destroy_soloader },
         { "sem_getvalue", (uintptr_t) &sem_getvalue_soloader },
